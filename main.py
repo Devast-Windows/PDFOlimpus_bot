@@ -43,20 +43,190 @@ if not OPENAI_API_KEY:
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # ==========================
-# Funciones de OpenAI
+# Textos multilingües
 # ==========================
 
-def dividir_texto(texto, tamaño=8000):
-    return [texto[i:i + tamaño] for i in range(0, len(texto), tamaño)]
+MENSAJES = {
+    "es": {
+        "start": (
+            "👋 Hola, soy *PDF-Olimpus_bot*, tu asistente premium para procesar y resumir PDFs.\n\n"
+            "Envíame un archivo PDF y te ayudaré con:\n"
+            "• Resumen corto\n"
+            "• Resumen largo\n"
+            "• Puntos clave\n"
+            "• Explicación simple\n"
+            "• Traducción\n\n"
+            "Solo envía el PDF como documento (no como foto)."
+        "trad_que": "¿Qué deseas traducir?",
+        "trad_pdf_completo": "📄 Traducir PDF completo",
+        "trad_resumen": "📝 Traducir solo el resumen",
+        "elige_idioma_trad": "Elige el idioma de destino:",
+        "trad_pdf_procesando": "🌐 Traduciendo PDF completo, esto puede tomar un momento...",
+        "trad_resumen_procesando": "🌐 Traduciendo el resumen...",
+        ),
+        "ayuda": (
+            "📘 *Ayuda*\n\n"
+            "1️⃣ Envía un PDF como documento.\n"
+            "2️⃣ El bot leerá el contenido.\n"
+            "3️⃣ Te preguntará qué quieres hacer:\n"
+            "   • Resumen corto\n"
+            "   • Resumen largo\n"
+            "   • Puntos clave\n"
+            "   • Explicación simple\n"
+            "   • Traducir al español\n\n"
+            "Si el PDF es muy grande, el bot lo divide en partes automáticamente."
+        ),
+        "pide_pdf": "Envíame un archivo PDF como *documento* para poder procesarlo.",
+        "recibiendo_pdf": "📥 Recibiendo tu PDF, dame un momento...",
+        "no_texto_pdf": "No pude extraer texto del PDF. Puede ser un PDF escaneado.",
+        "idioma_detectado": "✅ PDF procesado. Idioma detectado: *{idioma}*.",
+        "que_hacer": "¿Qué quieres hacer con este PDF?",
+        "procesando": "🧠 Procesando tu solicitud...",
+        "error_lectura": "Ocurrió un error al leer el PDF.",
+        "error_ia": "Ocurrió un error al procesar el texto con IA.",
+        "reenviar_pdf": "No encontré el contenido del PDF. Envíalo de nuevo.",
+        "solo_pdf_doc": "Por favor envía un archivo en formato PDF.",
+    },
+    "en": {
+        "start": (
+            "👋 Hi, I'm *PDF-Olimpus_bot*, your premium assistant for processing and summarizing PDFs.\n\n"
+            "Send me a PDF file and I will help you with:\n"
+            "• Short summary\n"
+            "• Long summary\n"
+            "• Key points\n"
+            "• Simple explanation\n"
+            "• Translation\n\n"
+            "Just send the PDF as a document (not as a photo)."
+        "trad_que": "What would you like to translate?",
+        "trad_pdf_completo": "📄 Translate full PDF",
+        "trad_resumen": "📝 Translate only the summary",
+        "elige_idioma_trad": "Choose the target language:",
+        "trad_pdf_procesando": "🌐 Translating full PDF, this may take a moment...",
+        "trad_resumen_procesando": "🌐 Translating the summary...",
+        ),
+        "ayuda": (
+            "📘 *Help*\n\n"
+            "1️⃣ Send a PDF as a document.\n"
+            "2️⃣ The bot will read its content.\n"
+            "3️⃣ It will ask what you want to do:\n"
+            "   • Short summary\n"
+            "   • Long summary\n"
+            "   • Key points\n"
+            "   • Simple explanation\n"
+            "   • Translate to Spanish\n\n"
+            "If the PDF is very large, the bot will automatically split it into parts."
+        ),
+        "pide_pdf": "Send me a PDF file as a *document* so I can process it.",
+        "recibiendo_pdf": "📥 Receiving your PDF, give me a moment...",
+        "no_texto_pdf": "I couldn't extract text from this PDF. It may be a scanned document.",
+        "idioma_detectado": "✅ PDF processed. Detected language: *{idioma}*.",
+        "que_hacer": "What would you like to do with this PDF?",
+        "procesando": "🧠 Processing your request...",
+        "error_lectura": "An error occurred while reading the PDF.",
+        "error_ia": "An error occurred while processing the text with AI.",
+        "reenviar_pdf": "I couldn't find the PDF content. Please send it again.",
+        "solo_pdf_doc": "Please send a file in PDF format.",
+    },
+    "ru": {
+        "start": (
+            "👋 Привет, я *PDF-Olimpus_bot*, твой премиум‑ассистент для обработки и резюмирования PDF.\n\n"
+            "Отправь мне PDF‑файл, и я помогу тебе с:\n"
+            "• Кратким резюме\n"
+            "• Подробным резюме\n"
+            "• Ключевыми моментами\n"
+            "• Простым объяснением\n"
+            "• Переводом\n\n"
+            "Отправляй PDF как документ (не как фото)."
+        "trad_que": "Что вы хотите перевести?",
+        "trad_pdf_completo": "📄 Перевести весь PDF",
+        "trad_resumen": "📝 Перевести только резюме",
+        "elige_idioma_trad": "Выберите язык перевода:",
+        "trad_pdf_procesando": "🌐 Перевожу весь PDF, это может занять время...",
+        "trad_resumen_procesando": "🌐 Перевожу резюме...",
+        ),
+        "ayuda": (
+            "📘 *Помощь*\n\n"
+            "1️⃣ Отправь PDF как документ.\n"
+            "2️⃣ Бот прочитает его содержимое.\n"
+            "3️⃣ Он спросит, что ты хочешь сделать:\n"
+            "   • Краткое резюме\n"
+            "   • Подробное резюме\n"
+            "   • Ключевые моменты\n"
+            "   • Простое объяснение\n"
+            "   • Перевод на испанский\n\n"
+            "Если PDF очень большой, бот автоматически разделит его на части."
+        ),
+        "pide_pdf": "Отправь мне PDF‑файл как *документ*, чтобы я мог его обработать.",
+        "recibiendo_pdf": "📥 Получаю твой PDF, подожди немного...",
+        "no_texto_pdf": "Мне не удалось извлечь текст из этого PDF. Возможно, это скан.",
+        "idioma_detectado": "✅ PDF обработан. Обнаруженный язык: *{idioma}*.",
+        "que_hacer": "Что ты хочешь сделать с этим PDF?",
+        "procesando": "🧠 Обрабатываю твой запрос...",
+        "error_lectura": "Произошла ошибка при чтении PDF.",
+        "error_ia": "Произошла ошибка при обработке текста с помощью ИИ.",
+        "reenviar_pdf": "Не удалось найти содержимое PDF. Пожалуйста, отправь его ещё раз.",
+        "solo_pdf_doc": "Пожалуйста, отправь файл в формате PDF.",
+    },
+}
+
+# ==========================
+# BOTONES MULTILINGÜES
+# ==========================
+
+BOTONES = {
+    "es": {
+        "resumen_corto": "📄 Resumen corto",
+        "resumen_largo": "📘 Resumen largo",
+        "puntos_clave": "⭐ Puntos clave",
+        "explicacion_simple": "👶 Explicación simple",
+        "traducir": "🌎 Traducir",
+    },
+    "en": {
+        "resumen_corto": "📄 Short summary",
+        "resumen_largo": "📘 Long summary",
+        "puntos_clave": "⭐ Key points",
+        "explicacion_simple": "👶 Simple explanation",
+        "traducir": "🌎 Translate",
+    },
+    "ru": {
+        "resumen_corto": "📄 Краткое резюме",
+        "resumen_largo": "📘 Подробное резюме",
+        "puntos_clave": "⭐ Ключевые моменты",
+        "explicacion_simple": "👶 Простое объяснение",
+        "traducir": "🌎 Перевести",
+    },
+}
+
+
+def botones_por_idioma(lang: str):
+    b = BOTONES.get(lang, BOTONES["es"])
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(b["resumen_corto"], callback_data="resumen_corto")],
+        [InlineKeyboardButton(b["resumen_largo"], callback_data="resumen_largo")],
+        [InlineKeyboardButton(b["puntos_clave"], callback_data="puntos_clave")],
+        [InlineKeyboardButton(b["explicacion_simple"], callback_data="explicacion_simple")],
+        [InlineKeyboardButton(b["traducir"], callback_data="traducir_menu")],
+    ])
+
+# ==========================
+# Funciones de idioma
+# ==========================
+
+def normalizar_idioma_nombre(nombre: str) -> str:
+    nombre = (nombre or "").strip().lower()
+
+    if any(x in nombre for x in ["español", "castellano", "spanish"]):
+        return "es"
+    if any(x in nombre for x in ["inglés", "english"]):
+        return "en"
+    if any(x in nombre for x in ["ruso", "russian", "русский"]):
+        return "ru"
+
+    return "es"
 
 
 def detectar_idioma_texto(texto: str) -> str:
-    """
-    Detecta el idioma principal de un texto usando OpenAI.
-    Devuelve solo el nombre del idioma, por ejemplo: 'español', 'inglés', 'ruso'.
-    """
     try:
-        # Tomamos solo un fragmento si el texto es muy largo, para no gastar tokens de más
         muestra = texto[:4000]
 
         respuesta = client.chat.completions.create(
@@ -66,30 +236,87 @@ def detectar_idioma_texto(texto: str) -> str:
                     "role": "system",
                     "content": (
                         "Eres un detector de idioma. "
-                        "Tu trabajo es identificar en qué idioma está escrito el siguiente texto. "
-                        "Responde únicamente con el nombre del idioma en español, por ejemplo: "
-                        "'español', 'inglés', 'ruso', 'portugués', 'francés', 'alemán', 'italiano', "
-                        "'chino', 'árabe', etc. Sin explicaciones adicionales."
+                        "Responde solo con el nombre del idioma en español."
                     ),
                 },
-                {
-                    "role": "user",
-                    "content": muestra,
-                },
+                {"role": "user", "content": muestra},
             ],
         )
 
         idioma = respuesta.choices[0].message.content.strip().lower()
-        # Normalizamos un poco por si devuelve algo raro
         if "\n" in idioma:
             idioma = idioma.split("\n")[0].strip().lower()
 
-        logger.info(f"Idioma detectado para el PDF: {idioma}")
         return idioma
 
     except Exception as e:
-        logger.error(f"Error al detectar idioma: {e}")
+        logger.error(f"Error al detectar idioma del PDF: {e}")
         return "desconocido"
+
+
+def detectar_idioma_usuario(texto: str) -> str:
+    try:
+        muestra = texto[:1000]
+
+        respuesta = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Detecta el idioma del usuario y responde solo con: es, en o ru."
+                    ),
+                },
+                {"role": "user", "content": muestra},
+            ],
+        )
+
+        codigo = respuesta.choices[0].message.content.strip().lower()
+        if codigo not in ["es", "en", "ru"]:
+            codigo = "es"
+
+        return codigo
+
+    except Exception as e:
+        logger.error(f"Error al detectar idioma del usuario: {e}")
+        return "es"
+
+
+def obtener_idioma_usuario(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
+    lang = context.user_data.get("user_lang")
+    if lang in ["es", "en", "ru"]:
+        return lang
+
+    texto = None
+    if update.message and update.message.text:
+        texto = update.message.text
+
+    if not texto:
+        context.user_data["user_lang"] = "es"
+        return "es"
+
+    lang = detectar_idioma_usuario(texto)
+    context.user_data["user_lang"] = lang
+    return lang
+
+
+def t(lang: str, clave: str, **kwargs) -> str:
+    if lang not in MENSAJES:
+        lang = "es"
+    texto = MENSAJES[lang].get(clave, "")
+    if kwargs:
+        try:
+            texto = texto.format(**kwargs)
+        except:
+            pass
+    return texto
+
+# ==========================
+# Funciones de OpenAI
+# ==========================
+
+def dividir_texto(texto, tamaño=8000):
+    return [texto[i:i + tamaño] for i in range(0, len(texto), tamaño)]
 
 
 def resumir_por_partes(texto, prompt):
@@ -122,49 +349,29 @@ def resumir_por_partes(texto, prompt):
 
     return respuesta_final.choices[0].message.content
 
-
 # ==========================
-# Handlers de Telegram
+# Handlers
 # ==========================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    mensaje = (
-        "👋 Hola, soy *PDF-Olimpus_bot*, tu asistente premium para procesar y resumir PDFs.\n\n"
-        "Envíame un archivo PDF y te ayudaré con:\n"
-        "• Resumen corto\n"
-        "• Resumen largo\n"
-        "• Puntos clave\n"
-        "• Explicación simple\n"
-        "• Traducción\n\n"
-        "Solo envía el PDF como documento (no como foto)."
-    )
-    await update.message.reply_markdown(mensaje)
+    lang = obtener_idioma_usuario(update, context)
+    await update.message.reply_markdown(t(lang, "start"))
 
 
 async def ayuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    mensaje = (
-        "📘 *Ayuda*\n\n"
-        "1️⃣ Envía un PDF como documento.\n"
-        "2️⃣ El bot leerá el contenido.\n"
-        "3️⃣ Te preguntará qué quieres hacer:\n"
-        "   • Resumen corto\n"
-        "   • Resumen largo\n"
-        "   • Puntos clave\n"
-        "   • Explicación simple\n"
-        "   • Traducir al español\n\n"
-        "Si el PDF es muy grande, el bot lo divide en partes automáticamente."
-    )
-    await update.message.reply_markdown(mensaje)
+    lang = obtener_idioma_usuario(update, context)
+    await update.message.reply_markdown(t(lang, "ayuda"))
 
 
 async def handle_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    lang = obtener_idioma_usuario(update, context)
     document = update.message.document
 
     if not document.mime_type or "pdf" not in document.mime_type:
-        await update.message.reply_text("Por favor envía un archivo en formato PDF.")
+        await update.message.reply_text(t(lang, "solo_pdf_doc"))
         return
 
-    await update.message.reply_text("📥 Recibiendo tu PDF, dame un momento...")
+    await update.message.reply_text(t(lang, "recibiendo_pdf"))
 
     file = await document.get_file()
     file_path = "temp.pdf"
@@ -180,39 +387,31 @@ async def handle_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 texto += extraido + "\n"
 
         if not texto.strip():
-            await update.message.reply_text("No pude extraer texto del PDF. Puede ser un PDF escaneado.")
+            await update.message.reply_text(t(lang, "no_texto_pdf"))
             return
 
-        # Guardamos el texto del PDF
         context.user_data["pdf_text"] = texto
 
-        # 🔍 NUEVO: detectar idioma del PDF y guardarlo
-        idioma_pdf = detectar_idioma_texto(texto)
-        context.user_data["pdf_lang"] = idioma_pdf
-
-        logger.info(f"Idioma del PDF guardado en user_data: {idioma_pdf}")
-
-        # Te avisamos (por ahora en español, luego lo haremos dinámico)
-        await update.message.reply_text(f"✅ PDF procesado. Idioma detectado: *{idioma_pdf}*.", parse_mode="Markdown")
-
-        keyboard = [
-            [InlineKeyboardButton("📄 Resumen corto", callback_data="resumen_corto")],
-            [InlineKeyboardButton("📘 Resumen largo", callback_data="resumen_largo")],
-            [InlineKeyboardButton("⭐ Puntos clave", callback_data="puntos_clave")],
-            [InlineKeyboardButton("👶 Explicación simple", callback_data="explicacion_simple")],
-            [InlineKeyboardButton("🌎 Traducir al español", callback_data="traducir")],
-        ]
-
-        reply_markup = InlineKeyboardMarkup(keyboard)
+        idioma_nombre = detectar_idioma_texto(texto)
+        context.user_data["pdf_lang_name"] = idioma_nombre
+        context.user_data["pdf_lang"] = normalizar_idioma_nombre(idioma_nombre)
 
         await update.message.reply_text(
-            "¿Qué quieres hacer con este PDF?",
+            t(lang, "idioma_detectado", idioma=idioma_nombre),
+            parse_mode="Markdown",
+        )
+
+        # 🔥 BOTONES MULTILINGÜES
+        reply_markup = botones_por_idioma(lang)
+
+        await update.message.reply_text(
+            t(lang, "que_hacer"),
             reply_markup=reply_markup,
         )
 
     except Exception as e:
         logger.error(f"Error al procesar el PDF: {e}")
-        await update.message.reply_text("Ocurrió un error al leer el PDF.")
+        await update.message.reply_text(t(lang, "error_lectura"))
     finally:
         if os.path.exists(file_path):
             os.remove(file_path)
@@ -222,39 +421,83 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
+    lang = context.user_data.get("user_lang", "es")
     texto = context.user_data.get("pdf_text", "")
-    idioma_pdf = context.user_data.get("pdf_lang", "desconocido")
 
     if not texto:
-        await query.edit_message_text("No encontré el contenido del PDF. Envíalo de nuevo.")
+        await query.edit_message_text(t(lang, "reenviar_pdf"))
         return
 
     accion = query.data
+        # Submenú de traducción: elegir PDF completo o solo resumen
+    if accion == "traducir_menu":
+        keyboard = [
+            [InlineKeyboardButton(t(lang, "trad_pdf_completo"), callback_data="trad_pdf_menu")],
+            [InlineKeyboardButton(t(lang, "trad_resumen"), callback_data="trad_resumen_menu")],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(
+            t(lang, "trad_que"),
+            reply_markup=reply_markup,
+        )
+        return
+            # Menú de idiomas para traducción de PDF completo
+    if accion == "trad_pdf_menu":
+        keyboard = [
+            [
+                InlineKeyboardButton("🇪🇸 Español", callback_data="trad_pdf_es"),
+                InlineKeyboardButton("🇬🇧 English", callback_data="trad_pdf_en"),
+            ],
+            [
+                InlineKeyboardButton("🇷🇺 Русский", callback_data="trad_pdf_ru"),
+                InlineKeyboardButton("🇵🇹 Português", callback_data="trad_pdf_pt"),
+            ],
+            [
+                InlineKeyboardButton("🇫🇷 Français", callback_data="trad_pdf_fr"),
+                InlineKeyboardButton("🇩🇪 Deutsch", callback_data="trad_pdf_de"),
+            ],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(
+            t(lang, "elige_idioma_trad"),
+            reply_markup=reply_markup,
+        )
+        return
 
-    if accion == "resumen_corto":
-        prompt = "Haz un resumen breve y conciso (máximo 5 líneas) de este texto:"
-        titulo = "📄 Resumen corto"
-    elif accion == "resumen_largo":
-        prompt = "Haz un resumen detallado y bien estructurado de este texto:"
-        titulo = "📘 Resumen largo"
-    elif accion == "puntos_clave":
-        prompt = "Extrae los puntos clave en viñetas:"
-        titulo = "⭐ Puntos clave"
-    elif accion == "explicacion_simple":
-        prompt = "Explica este texto como si fuera para un niño de 10 años:"
-        titulo = "👶 Explicación simple"
-    elif accion == "traducir":
-        prompt = "Traduce este texto al español:"
-        titulo = "🌎 Traducción al español"
-    else:
-        prompt = "Haz un resumen de este texto:"
-        titulo = "📄 Resumen"
+    # Menú de idiomas para traducción de RESUMEN
+    if accion == "trad_resumen_menu":
+        keyboard = [
+            [
+                InlineKeyboardButton("🇪🇸 Español", callback_data="trad_resumen_es"),
+                InlineKeyboardButton("🇬🇧 English", callback_data="trad_resumen_en"),
+            ],
+            [
+                InlineKeyboardButton("🇷🇺 Русский", callback_data="trad_resumen_ru"),
+                InlineKeyboardButton("🇵🇹 Português", callback_data="trad_resumen_pt"),
+            ],
+            [
+                InlineKeyboardButton("🇫🇷 Français", callback_data="trad_resumen_fr"),
+                InlineKeyboardButton("🇩🇪 Deutsch", callback_data="trad_resumen_de"),
+            ],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(
+            t(lang, "elige_idioma_trad"),
+            reply_markup=reply_markup,
+        )
+        return
 
-    # Por ahora solo mostramos el idioma detectado en logs,
-    # en los siguientes pasos lo usaremos para cambiar idioma de salida.
-    logger.info(f"Acción '{accion}' solicitada. Idioma del PDF: {idioma_pdf}")
+    prompts = {
+        "resumen_corto": ("📄 Resumen corto", "Haz un resumen breve y conciso (máximo 5 líneas) de este texto:"),
+        "resumen_largo": ("📘 Resumen largo", "Haz un resumen detallado y bien estructurado de este texto:"),
+        "puntos_clave": ("⭐ Puntos clave", "Extrae los puntos clave en viñetas:"),
+        "explicacion_simple": ("👶 Explicación simple", "Explica este texto como si fuera para un niño de 10 años:"),
+        "traducir": ("🌎 Traducción", "Traduce este texto al español:"),
+    }
 
-    await query.edit_message_text("🧠 Procesando tu solicitud...")
+    titulo, prompt = prompts.get(accion, ("📄 Resumen", "Haz un resumen de este texto:"))
+
+    await query.edit_message_text(t(lang, "procesando"))
 
     try:
         resultado = resumir_por_partes(texto, prompt)
@@ -266,42 +509,8 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception as e:
         logger.error(f"Error con OpenAI: {e}")
-        await query.edit_message_text("Ocurrió un error al procesar el texto con IA.")
+        await query.edit_message_text(t(lang, "error_ia"))
 
 
 async def texto_no_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Envíame un archivo PDF como *documento* para poder procesarlo.",
-        parse_mode="Markdown",
-    )
-
-
-# ==========================
-# Función principal
-# ==========================
-
-def main():
-    request = HTTPXRequest(read_timeout=30.0)
-
-    application = (
-        Application.builder()
-        .token(TELEGRAM_TOKEN)
-        .request(request)
-        .build()
-    )
-
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("ayuda", ayuda))
-
-    application.add_handler(MessageHandler(filters.Document.PDF, handle_pdf))
-
-    application.add_handler(CallbackQueryHandler(botones_pdf))
-
-    application.add_handler(MessageHandler(filters.ALL & ~filters.Document.PDF, texto_no_pdf))
-
-    logger.info("Bot iniciando...")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
-
-
-if __name__ == "__main__":
-    main()
+    lang = obtener_idioma
