@@ -2,7 +2,7 @@ import os
 import logging
 from dotenv import load_dotenv
 from PyPDF2 import PdfReader
-from openai import OpenAI
+from groq import Groq   # ← NUEVO IMPORT
 
 from telegram import (
     Update,
@@ -32,15 +32,15 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")   # ← NUEVA VARIABLE
 
 if not TELEGRAM_TOKEN:
     raise ValueError("Falta la variable de entorno TELEGRAM_TOKEN")
 
-if not OPENAI_API_KEY:
-    raise ValueError("Falta la variable de entorno OPENAI_API_KEY")
+if not GROQ_API_KEY:
+    raise ValueError("Falta la variable de entorno GROQ_API_KEY")
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = Groq(api_key=GROQ_API_KEY)   # ← NUEVO CLIENTE
 
 # ==========================
 # Textos multilingües
@@ -234,7 +234,7 @@ def detectar_idioma_texto(texto: str) -> str:
         muestra = texto[:4000]
 
         respuesta = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="llama3-8b-8192",
             messages=[
                 {
                     "role": "system",
@@ -263,7 +263,7 @@ def detectar_idioma_usuario(texto: str) -> str:
         muestra = texto[:1000]
 
         respuesta = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="llama3-8b-8192",
             messages=[
                 {
                     "role": "system",
@@ -315,8 +315,9 @@ def t(lang: str, clave: str, **kwargs) -> str:
             pass
     return texto
 
+
 # ==========================
-# Funciones de OpenAI
+# Funciones de IA (Groq)
 # ==========================
 
 def dividir_texto(texto, tamaño=3000):
@@ -333,7 +334,7 @@ def resumir_por_partes(texto, prompt):
 
     for parte in partes:
         respuesta = client.chat.completions.create(
-           model="gpt-3.5-turbo",
+            model="llama3-8b-8192",
             messages=[
                 {"role": "system", "content": "Eres un asistente experto en análisis y resumen de textos."},
                 {"role": "user", "content": prompt + "\n\n" + parte},
@@ -344,7 +345,7 @@ def resumir_por_partes(texto, prompt):
     combinado = "\n\n".join(resúmenes)
 
     respuesta_final = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="llama3-8b-8192",
         messages=[
             {"role": "system", "content": "Eres un asistente experto en síntesis de información."},
             {"role": "user", "content": "Combina de manera clara y coherente estos resúmenes parciales:\n\n" + combinado},
@@ -353,17 +354,15 @@ def resumir_por_partes(texto, prompt):
 
     return respuesta_final.choices[0].message.content
 
+
 def traducir_por_partes(texto, idioma_destino):
-    """
-    Traduce un texto largo dividiéndolo en partes para evitar límites de tokens.
-    """
-    partes = dividir_texto(texto, tamaño=6000)
+    partes = dividir_texto(texto, tamaño=3000)
     traducciones = []
 
     for parte in partes:
         try:
             respuesta = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="llama3-8b-8192",
                 messages=[
                     {
                         "role": "system",
@@ -585,20 +584,24 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(f"{titulo}:\n\n{resultado}")
 
     except Exception as e:
-        logger.error(f"Error con OpenAI: {e}")
+        logger.error(f"Error con IA: {e}")   # ← CORREGIDO
         await query.edit_message_text(t(lang, "error_ia"))
 
 
 async def texto_no_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = obtener_idioma_usuario(update, context)
     await update.message.reply_text(t(lang, "solo_pdf_doc"))
-
 # ==========================
 # Lanzamiento del bot
 # ==========================
 
 def main():
-    application = Application.builder().token(TELEGRAM_TOKEN).request(HTTPXRequest()).build()
+    application = (
+        Application.builder()
+        .token(TELEGRAM_TOKEN)
+        .request(HTTPXRequest())
+        .build()
+    )
 
     # 🔹 Comandos
     application.add_handler(CommandHandler("start", start))
@@ -619,6 +622,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
