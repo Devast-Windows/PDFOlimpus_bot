@@ -60,7 +60,7 @@ def resumir_por_partes(texto, prompt):
 
     for parte in partes:
         respuesta = client.chat.completions.create(
-            model="gpt-4o-mini-1",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "Eres un asistente experto en análisis y resumen de textos."},
                 {"role": "user", "content": prompt + "\n\n" + parte},
@@ -71,7 +71,7 @@ def resumir_por_partes(texto, prompt):
     combinado = "\n\n".join(resúmenes)
 
     respuesta_final = client.chat.completions.create(
-        model="gpt-4o-mini-1",
+        model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": "Eres un asistente experto en síntesis de información."},
             {"role": "user", "content": "Combina de manera clara y coherente estos resúmenes parciales:\n\n" + combinado},
