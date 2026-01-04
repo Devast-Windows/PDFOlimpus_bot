@@ -277,7 +277,11 @@ async def texto_no_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ==========================
 
 def main():
-    application = Application.builder().token(TELEGRAM_TOKEN).build()
+    from telegram.request import HTTPXRequest
+
+request = HTTPXRequest(read_timeout=30.0)  # 30 segundos de espera
+
+application = Application.builder().token(TELEGRAM_TOKEN).request(request).build()
 
     # Comandos
     application.add_handler(CommandHandler("start", start))
@@ -308,3 +312,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
