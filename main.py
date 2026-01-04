@@ -592,37 +592,27 @@ async def texto_no_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = obtener_idioma_usuario(update, context)
     await update.message.reply_text(t(lang, "solo_pdf_doc"))
 # ==========================
-# Lanzamiento del bot
+# Función principal
 # ==========================
 
 def main():
-    application = (
-        Application.builder()
-        .token(TELEGRAM_TOKEN)
-        .request(HTTPXRequest())
-        .build()
-    )
+    application = Application.builder().token(TELEGRAM_TOKEN).request(HTTPXRequest()).build()
 
-    # 🔹 Comandos
+    # * Comandos
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("ayuda", ayuda))
 
-    # 🔹 PDF recibido como documento
+    # * PDF recibido como documento
     application.add_handler(MessageHandler(filters.Document.PDF, handle_pdf))
 
-    # 🔹 Texto que no es PDF
+    # * Texto que no es PDF
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, texto_no_pdf))
 
-    # 🔹 Botones de resumen / traducción
+    # * Botones de resumen / traducción
     application.add_handler(CallbackQueryHandler(botones_pdf))
 
-    # 🔹 Iniciar el bot
+    # * Iniciar el bot
     application.run_polling()
-
 
 if __name__ == "__main__":
     main()
-
-
-
-
