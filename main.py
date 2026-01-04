@@ -50,6 +50,48 @@ def dividir_texto(texto, tamaño=8000):
     return [texto[i:i + tamaño] for i in range(0, len(texto), tamaño)]
 
 
+def detectar_idioma_texto(texto: str) -> str:
+    """
+    Detecta el idioma principal de un texto usando OpenAI.
+    Devuelve solo el nombre del idioma, por ejemplo: 'español', 'inglés', 'ruso'.
+    """
+    try:
+        # Tomamos solo un fragmento si el texto es muy largo, para no gastar tokens de más
+        muestra = texto[:4000]
+
+        respuesta = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Eres un detector de idioma. "
+                        "Tu trabajo es identificar en qué idioma está escrito el siguiente texto. "
+                        "Responde únicamente con el nombre del idioma en español, por ejemplo: "
+                        "'español', 'inglés', 'ruso', 'portugués', 'francés', 'alemán', 'italiano', "
+                        "'chino', 'árabe', etc. Sin explicaciones adicionales."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": muestra,
+                },
+            ],
+        )
+
+        idioma = respuesta.choices[0].message.content.strip().lower()
+        # Normalizamos un poco por si devuelve algo raro
+        if "\n" in idioma:
+            idioma = idioma.split("\n")[0].strip().lower()
+
+        logger.info(f"Idioma detectado para el PDF: {idioma}")
+        return idioma
+
+    except Exception as e:
+        logger.error(f"Error al detectar idioma: {e}")
+        return "desconocido"
+
+
 def resumir_por_partes(texto, prompt):
     partes = dividir_texto(texto)
 
@@ -141,7 +183,17 @@ async def handle_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("No pude extraer texto del PDF. Puede ser un PDF escaneado.")
             return
 
+        # Guardamos el texto del PDF
         context.user_data["pdf_text"] = texto
+
+        # 🔍 NUEVO: detectar idioma del PDF y guardarlo
+        idioma_pdf = detectar_idioma_texto(texto)
+        context.user_data["pdf_lang"] = idioma_pdf
+
+        logger.info(f"Idioma del PDF guardado en user_data: {idioma_pdf}")
+
+        # Te avisamos (por ahora en español, luego lo haremos dinámico)
+        await update.message.reply_text(f"✅ PDF procesado. Idioma detectado: *{idioma_pdf}*.", parse_mode="Markdown")
 
         keyboard = [
             [InlineKeyboardButton("📄 Resumen corto", callback_data="resumen_corto")],
@@ -154,7 +206,7 @@ async def handle_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         await update.message.reply_text(
-            "✅ PDF procesado.\n\n¿Qué quieres hacer con este PDF?",
+            "¿Qué quieres hacer con este PDF?",
             reply_markup=reply_markup,
         )
 
@@ -171,6 +223,7 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
     texto = context.user_data.get("pdf_text", "")
+    idioma_pdf = context.user_data.get("pdf_lang", "desconocido")
 
     if not texto:
         await query.edit_message_text("No encontré el contenido del PDF. Envíalo de nuevo.")
@@ -196,6 +249,10 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         prompt = "Haz un resumen de este texto:"
         titulo = "📄 Resumen"
+
+    # Por ahora solo mostramos el idioma detectado en logs,
+    # en los siguientes pasos lo usaremos para cambiar idioma de salida.
+    logger.info(f"Acción '{accion}' solicitada. Idioma del PDF: {idioma_pdf}")
 
     await query.edit_message_text("🧠 Procesando tu solicitud...")
 
