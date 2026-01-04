@@ -46,7 +46,7 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 # Funciones de OpenAI
 # ==========================
 
-def dividir_texto(texto, tamaño=2000):
+def dividir_texto(texto, tamaño=8000):
     return [texto[i:i + tamaño] for i in range(0, len(texto), tamaño)]
 
 
