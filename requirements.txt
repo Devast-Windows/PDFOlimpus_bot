@@ -1,0 +1,5 @@
+python-telegram-bot
+pypdf
+openai
+python-dotenv
+requests
