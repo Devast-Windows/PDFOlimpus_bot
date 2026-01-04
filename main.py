@@ -319,7 +319,7 @@ def t(lang: str, clave: str, **kwargs) -> str:
 # Funciones de OpenAI
 # ==========================
 
-def dividir_texto(texto, tamaño=8000):
+def dividir_texto(texto, tamaño=3000):
     return [texto[i:i + tamaño] for i in range(0, len(texto), tamaño)]
 
 
@@ -333,7 +333,7 @@ def resumir_por_partes(texto, prompt):
 
     for parte in partes:
         respuesta = client.chat.completions.create(
-            model="gpt-4o-mini",
+           model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "Eres un asistente experto en análisis y resumen de textos."},
                 {"role": "user", "content": prompt + "\n\n" + parte},
@@ -619,5 +619,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
