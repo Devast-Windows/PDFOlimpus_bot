@@ -57,12 +57,6 @@ MENSAJES = {
             "• Explicación simple\n"
             "• Traducción\n\n"
             "Solo envía el PDF como documento (no como foto)."
-        "trad_que": "¿Qué deseas traducir?",
-        "trad_pdf_completo": "📄 Traducir PDF completo",
-        "trad_resumen": "📝 Traducir solo el resumen",
-        "elige_idioma_trad": "Elige el idioma de destino:",
-        "trad_pdf_procesando": "🌐 Traduciendo PDF completo, esto puede tomar un momento...",
-        "trad_resumen_procesando": "🌐 Traduciendo el resumen...",
         ),
         "ayuda": (
             "📘 *Ayuda*\n\n"
@@ -86,7 +80,15 @@ MENSAJES = {
         "error_ia": "Ocurrió un error al procesar el texto con IA.",
         "reenviar_pdf": "No encontré el contenido del PDF. Envíalo de nuevo.",
         "solo_pdf_doc": "Por favor envía un archivo en formato PDF.",
+
+        "trad_que": "¿Qué deseas traducir?",
+        "trad_pdf_completo": "📄 Traducir PDF completo",
+        "trad_resumen": "📝 Traducir solo el resumen",
+        "elige_idioma_trad": "Elige el idioma de destino:",
+        "trad_pdf_procesando": "🌐 Traduciendo PDF completo, esto puede tomar un momento...",
+        "trad_resumen_procesando": "🌐 Traduciendo el resumen...",
     },
+
     "en": {
         "start": (
             "👋 Hi, I'm *PDF-Olimpus_bot*, your premium assistant for processing and summarizing PDFs.\n\n"
@@ -97,12 +99,6 @@ MENSAJES = {
             "• Simple explanation\n"
             "• Translation\n\n"
             "Just send the PDF as a document (not as a photo)."
-        "trad_que": "What would you like to translate?",
-        "trad_pdf_completo": "📄 Translate full PDF",
-        "trad_resumen": "📝 Translate only the summary",
-        "elige_idioma_trad": "Choose the target language:",
-        "trad_pdf_procesando": "🌐 Translating full PDF, this may take a moment...",
-        "trad_resumen_procesando": "🌐 Translating the summary...",
         ),
         "ayuda": (
             "📘 *Help*\n\n"
@@ -126,7 +122,15 @@ MENSAJES = {
         "error_ia": "An error occurred while processing the text with AI.",
         "reenviar_pdf": "I couldn't find the PDF content. Please send it again.",
         "solo_pdf_doc": "Please send a file in PDF format.",
+
+        "trad_que": "What would you like to translate?",
+        "trad_pdf_completo": "📄 Translate full PDF",
+        "trad_resumen": "📝 Translate only the summary",
+        "elige_idioma_trad": "Choose the target language:",
+        "trad_pdf_procesando": "🌐 Translating full PDF, this may take a moment...",
+        "trad_resumen_procesando": "🌐 Translating the summary...",
     },
+
     "ru": {
         "start": (
             "👋 Привет, я *PDF-Olimpus_bot*, твой премиум‑ассистент для обработки и резюмирования PDF.\n\n"
@@ -137,12 +141,6 @@ MENSAJES = {
             "• Простым объяснением\n"
             "• Переводом\n\n"
             "Отправляй PDF как документ (не как фото)."
-        "trad_que": "Что вы хотите перевести?",
-        "trad_pdf_completo": "📄 Перевести весь PDF",
-        "trad_resumen": "📝 Перевести только резюме",
-        "elige_idioma_trad": "Выберите язык перевода:",
-        "trad_pdf_procesando": "🌐 Перевожу весь PDF, это может занять время...",
-        "trad_resumen_procesando": "🌐 Перевожу резюме...",
         ),
         "ayuda": (
             "📘 *Помощь*\n\n"
@@ -166,9 +164,15 @@ MENSAJES = {
         "error_ia": "Произошла ошибка при обработке текста с помощью ИИ.",
         "reenviar_pdf": "Не удалось найти содержимое PDF. Пожалуйста, отправь его ещё раз.",
         "solo_pdf_doc": "Пожалуйста, отправь файл в формате PDF.",
+
+        "trad_que": "Что вы хотите перевести?",
+        "trad_pdf_completo": "📄 Перевести весь PDF",
+        "trad_resumen": "📝 Перевести только резюме",
+        "elige_idioma_trad": "Выберите язык перевода:",
+        "trad_pdf_procesando": "🌐 Перевожу весь PDF, это может занять время...",
+        "trad_resumen_procesando": "🌐 Перевожу резюме...",
     },
 }
-
 # ==========================
 # BOTONES MULTILINGÜES
 # ==========================
@@ -349,6 +353,35 @@ def resumir_por_partes(texto, prompt):
 
     return respuesta_final.choices[0].message.content
 
+def traducir_por_partes(texto, idioma_destino):
+    """
+    Traduce un texto largo dividiéndolo en partes para evitar límites de tokens.
+    """
+    partes = dividir_texto(texto, tamaño=6000)
+    traducciones = []
+
+    for parte in partes:
+        try:
+            respuesta = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            f"Eres un traductor profesional. Traduce el texto al idioma '{idioma_destino}' "
+                            "manteniendo el significado, tono y claridad."
+                        ),
+                    },
+                    {"role": "user", "content": parte},
+                ],
+            )
+            traducciones.append(respuesta.choices[0].message.content)
+
+        except Exception as e:
+            traducciones.append(f"[Error al traducir una parte: {e}]")
+
+    return "\n\n".join(traducciones)
+
 # ==========================
 # Handlers
 # ==========================
@@ -429,7 +462,7 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     accion = query.data
-        # Submenú de traducción: elegir PDF completo o solo resumen
+           # 🌎 Submenú principal de traducción
     if accion == "traducir_menu":
         keyboard = [
             [InlineKeyboardButton(t(lang, "trad_pdf_completo"), callback_data="trad_pdf_menu")],
@@ -441,7 +474,7 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=reply_markup,
         )
         return
-            # Menú de idiomas para traducción de PDF completo
+              # 🌐 Menú de idiomas para TRADUCIR PDF COMPLETO
     if accion == "trad_pdf_menu":
         keyboard = [
             [
@@ -463,6 +496,29 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=reply_markup,
         )
         return
+
+    # 🌐 Menú de idiomas para TRADUCIR SOLO EL RESUMEN
+    if accion == "trad_resumen_menu":
+        keyboard = [
+            [
+                InlineKeyboardButton("🇪🇸 Español", callback_data="trad_resumen_es"),
+                InlineKeyboardButton("🇬🇧 English", callback_data="trad_resumen_en"),
+            ],
+            [
+                InlineKeyboardButton("🇷🇺 Русский", callback_data="trad_resumen_ru"),
+                InlineKeyboardButton("🇵🇹 Português", callback_data="trad_resumen_pt"),
+            ],
+            [
+                InlineKeyboardButton("🇫🇷 Français", callback_data="trad_resumen_fr"),
+                InlineKeyboardButton("🇩🇪 Deutsch", callback_data="trad_resumen_de"),
+            ],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(
+            t(lang, "elige_idioma_trad"),
+            reply_markup=reply_markup,
+        )
+        return 
 
     # Menú de idiomas para traducción de RESUMEN
     if accion == "trad_resumen_menu":
@@ -487,6 +543,46 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+        # 🔥 Traducción del PDF completo
+    if accion.startswith("trad_pdf_"):
+        idioma_destino = accion.replace("trad_pdf_", "")
+        texto = context.user_data.get("pdf_text", "")
+        if not texto:
+            await query.edit_message_text(t(lang, "reenviar_pdf"))
+            return
+
+        await query.edit_message_text(t(lang, "trad_pdf_procesando"))
+
+        try:
+            resultado = traducir_por_partes(texto, idioma_destino)
+            if len(resultado) > 4000:
+                resultado = resultado[:3990] + "\n\n[Texto recortado por longitud]"
+            await query.edit_message_text(resultado)
+        except Exception as e:
+            logger.error(f"Error al traducir PDF: {e}")
+            await query.edit_message_text(t(lang, "error_ia"))
+        return
+
+    # 🔥 Traducción del resumen
+    if accion.startswith("trad_resumen_"):
+        idioma_destino = accion.replace("trad_resumen_", "")
+        resumen = context.user_data.get("last_summary", "")
+        if not resumen:
+            await query.edit_message_text(t(lang, "reenviar_pdf"))
+            return
+
+        await query.edit_message_text(t(lang, "trad_resumen_procesando"))
+
+        try:
+            resultado = traducir_por_partes(resumen, idioma_destino)
+            if len(resultado) > 4000:
+                resultado = resultado[:3990] + "\n\n[Texto recortado por longitud]"
+            await query.edit_message_text(resultado)
+        except Exception as e:
+            logger.error(f"Error al traducir resumen: {e}")
+            await query.edit_message_text(t(lang, "error_ia"))
+        return
+
     prompts = {
         "resumen_corto": ("📄 Resumen corto", "Haz un resumen breve y conciso (máximo 5 líneas) de este texto:"),
         "resumen_largo": ("📘 Resumen largo", "Haz un resumen detallado y bien estructurado de este texto:"),
@@ -501,6 +597,7 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         resultado = resumir_por_partes(texto, prompt)
+        context.user_data["last_summary"] = resultado
 
         if len(resultado) > 4000:
             resultado = resultado[:3990] + "\n\n[Texto recortado por longitud]"
@@ -514,3 +611,4 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def texto_no_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = obtener_idioma
+
