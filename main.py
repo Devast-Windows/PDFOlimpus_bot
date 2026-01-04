@@ -17,6 +17,7 @@ from telegram.ext import (
     ContextTypes,
     filters,
 )
+from telegram.request import HTTPXRequest
 
 # ==========================
 # Configuración básica
@@ -46,17 +47,10 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 # ==========================
 
 def dividir_texto(texto, tamaño=2000):
-    """
-    Divide el texto en partes de longitud máxima 'tamaño' caracteres.
-    """
     return [texto[i:i + tamaño] for i in range(0, len(texto), tamaño)]
 
 
 def resumir_por_partes(texto, prompt):
-    """
-    Divide el texto en partes, genera un resumen para cada parte
-    y luego combina todos los resúmenes en uno solo.
-    """
     partes = dividir_texto(texto)
 
     if not partes:
@@ -68,33 +62,19 @@ def resumir_por_partes(texto, prompt):
         respuesta = client.chat.completions.create(
             model="gpt-4o-mini-1",
             messages=[
-                {
-                    "role": "system",
-                    "content": "Eres un asistente experto en análisis y resumen de textos.",
-                },
-                {
-                    "role": "user",
-                    "content": prompt + "\n\n" + parte,
-                },
+                {"role": "system", "content": "Eres un asistente experto en análisis y resumen de textos."},
+                {"role": "user", "content": prompt + "\n\n" + parte},
             ],
         )
         resúmenes.append(respuesta.choices[0].message.content)
 
-    # Combinar todos los resúmenes en un resumen final
     combinado = "\n\n".join(resúmenes)
 
     respuesta_final = client.chat.completions.create(
         model="gpt-4o-mini-1",
         messages=[
-            {
-                "role": "system",
-                "content": "Eres un asistente experto en síntesis de información.",
-            },
-            {
-                "role": "user",
-                "content": "Combina de manera clara y coherente estos resúmenes parciales:\n\n"
-                           + combinado,
-            },
+            {"role": "system", "content": "Eres un asistente experto en síntesis de información."},
+            {"role": "user", "content": "Combina de manera clara y coherente estos resúmenes parciales:\n\n" + combinado},
         ],
     )
 
@@ -107,7 +87,7 @@ def resumir_por_partes(texto, prompt):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mensaje = (
-        "👋 Hola, soy *PDF-Olimpus_bot*, tu asistente para procesar y resumir PDFs.\n\n"
+        "👋 Hola, soy *PDF-Olimpus_bot*, tu asistente premium para procesar y resumir PDFs.\n\n"
         "Envíame un archivo PDF y te ayudaré con:\n"
         "• Resumen corto\n"
         "• Resumen largo\n"
@@ -130,19 +110,12 @@ async def ayuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "   • Puntos clave\n"
         "   • Explicación simple\n"
         "   • Traducir al español\n\n"
-        "Si el PDF es muy grande, el bot lo divide en partes para que no se caiga."
+        "Si el PDF es muy grande, el bot lo divide en partes automáticamente."
     )
     await update.message.reply_markdown(mensaje)
 
 
 async def handle_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Maneja el PDF enviado por el usuario:
-    - Descarga el PDF
-    - Extrae el texto
-    - Lo guarda en user_data
-    - Muestra botones con las 5 opciones
-    """
     document = update.message.document
 
     if not document.mime_type or "pdf" not in document.mime_type:
@@ -165,15 +138,11 @@ async def handle_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 texto += extraido + "\n"
 
         if not texto.strip():
-            await update.message.reply_text(
-                "No pude extraer texto del PDF. Asegúrate de que no sea una imagen escaneada."
-            )
+            await update.message.reply_text("No pude extraer texto del PDF. Puede ser un PDF escaneado.")
             return
 
-        # Guardamos el texto en user_data para usarlo luego con los botones
         context.user_data["pdf_text"] = texto
 
-        # Creamos los botones de opciones
         keyboard = [
             [InlineKeyboardButton("📄 Resumen corto", callback_data="resumen_corto")],
             [InlineKeyboardButton("📘 Resumen largo", callback_data="resumen_largo")],
@@ -198,20 +167,13 @@ async def handle_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Maneja las acciones de los botones:
-    - Usa el texto del PDF guardado en user_data
-    - Llama a resumir_por_partes con el prompt adecuado
-    """
     query = update.callback_query
     await query.answer()
 
     texto = context.user_data.get("pdf_text", "")
 
     if not texto:
-        await query.edit_message_text(
-            "No encontré el contenido del PDF. Intenta enviarlo de nuevo."
-        )
+        await query.edit_message_text("No encontré el contenido del PDF. Envíalo de nuevo.")
         return
 
     accion = query.data
@@ -220,49 +182,34 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
         prompt = "Haz un resumen breve y conciso (máximo 5 líneas) de este texto:"
         titulo = "📄 Resumen corto"
     elif accion == "resumen_largo":
-        prompt = (
-            "Haz un resumen detallado y bien estructurado de este texto. "
-            "Usa párrafos claros y organizados:"
-        )
+        prompt = "Haz un resumen detallado y bien estructurado de este texto:"
         titulo = "📘 Resumen largo"
     elif accion == "puntos_clave":
-        prompt = (
-            "Extrae los puntos clave de este texto en formato de viñetas. "
-            "Enfócate en ideas principales, conceptos importantes y conclusiones:"
-        )
+        prompt = "Extrae los puntos clave en viñetas:"
         titulo = "⭐ Puntos clave"
     elif accion == "explicacion_simple":
-        prompt = (
-            "Explica el contenido de este texto como si fuera para un niño de 10 años. "
-            "Usa un lenguaje sencillo y ejemplos fáciles de entender:"
-        )
+        prompt = "Explica este texto como si fuera para un niño de 10 años:"
         titulo = "👶 Explicación simple"
     elif accion == "traducir":
-        prompt = (
-            "Traduce este texto al español con un tono natural, claro y fácil de leer:"
-        )
+        prompt = "Traduce este texto al español:"
         titulo = "🌎 Traducción al español"
     else:
         prompt = "Haz un resumen de este texto:"
         titulo = "📄 Resumen"
 
-    await query.edit_message_text("🧠 Procesando tu solicitud, espera un momento...")
+    await query.edit_message_text("🧠 Procesando tu solicitud...")
 
     try:
         resultado = resumir_por_partes(texto, prompt)
 
-        # Si el resultado es muy largo, podemos cortarlo (Telegram tiene límite de caracteres)
         if len(resultado) > 4000:
             resultado = resultado[:3990] + "\n\n[Texto recortado por longitud]"
 
-        mensaje_final = f"{titulo}:\n\n{resultado}"
-        await query.edit_message_text(mensaje_final)
+        await query.edit_message_text(f"{titulo}:\n\n{resultado}")
 
     except Exception as e:
-        logger.error(f"Error al generar respuesta con OpenAI: {e}")
-        await query.edit_message_text(
-            "Ocurrió un error al procesar el texto con la IA. Intenta de nuevo más tarde."
-        )
+        logger.error(f"Error con OpenAI: {e}")
+        await query.edit_message_text("Ocurrió un error al procesar el texto con IA.")
 
 
 async def texto_no_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -277,34 +224,23 @@ async def texto_no_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ==========================
 
 def main():
-    from telegram.request import HTTPXRequest
+    request = HTTPXRequest(read_timeout=30.0)
 
-request = HTTPXRequest(read_timeout=30.0)  # 30 segundos de espera
+    application = (
+        Application.builder()
+        .token(TELEGRAM_TOKEN)
+        .request(request)
+        .build()
+    )
 
-application = Application.builder().token(TELEGRAM_TOKEN).request(request).build()
-
-    # Comandos
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("ayuda", ayuda))
 
-    # Manejo de PDFs
-    application.add_handler(
-        MessageHandler(
-            filters.Document.PDF,
-            handle_pdf,
-        )
-    )
+    application.add_handler(MessageHandler(filters.Document.PDF, handle_pdf))
 
-    # Botones
     application.add_handler(CallbackQueryHandler(botones_pdf))
 
-    # Cualquier otro mensaje
-    application.add_handler(
-        MessageHandler(
-            filters.ALL & ~filters.Document.PDF,
-            texto_no_pdf,
-        )
-    )
+    application.add_handler(MessageHandler(filters.ALL & ~filters.Document.PDF, texto_no_pdf))
 
     logger.info("Bot iniciando...")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
@@ -312,4 +248,3 @@ application = Application.builder().token(TELEGRAM_TOKEN).request(request).build
 
 if __name__ == "__main__":
     main()
-
