@@ -462,7 +462,8 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     accion = query.data
-           # 🌎 Submenú principal de traducción
+
+    # 🌎 Submenú principal de traducción
     if accion == "traducir_menu":
         keyboard = [
             [InlineKeyboardButton(t(lang, "trad_pdf_completo"), callback_data="trad_pdf_menu")],
@@ -474,7 +475,8 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=reply_markup,
         )
         return
-              # 🌐 Menú de idiomas para TRADUCIR PDF COMPLETO
+
+    # 🌐 Menú de idiomas para TRADUCIR PDF COMPLETO
     if accion == "trad_pdf_menu":
         keyboard = [
             [
@@ -518,32 +520,9 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
             t(lang, "elige_idioma_trad"),
             reply_markup=reply_markup,
         )
-        return 
-
-    # Menú de idiomas para traducción de RESUMEN
-    if accion == "trad_resumen_menu":
-        keyboard = [
-            [
-                InlineKeyboardButton("🇪🇸 Español", callback_data="trad_resumen_es"),
-                InlineKeyboardButton("🇬🇧 English", callback_data="trad_resumen_en"),
-            ],
-            [
-                InlineKeyboardButton("🇷🇺 Русский", callback_data="trad_resumen_ru"),
-                InlineKeyboardButton("🇵🇹 Português", callback_data="trad_resumen_pt"),
-            ],
-            [
-                InlineKeyboardButton("🇫🇷 Français", callback_data="trad_resumen_fr"),
-                InlineKeyboardButton("🇩🇪 Deutsch", callback_data="trad_resumen_de"),
-            ],
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(
-            t(lang, "elige_idioma_trad"),
-            reply_markup=reply_markup,
-        )
         return
 
-        # 🔥 Traducción del PDF completo
+    # 🔥 Traducción del PDF completo
     if accion.startswith("trad_pdf_"):
         idioma_destino = accion.replace("trad_pdf_", "")
         texto = context.user_data.get("pdf_text", "")
@@ -583,12 +562,12 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(t(lang, "error_ia"))
         return
 
+    # 🔥 Resúmenes y explicaciones
     prompts = {
         "resumen_corto": ("📄 Resumen corto", "Haz un resumen breve y conciso (máximo 5 líneas) de este texto:"),
         "resumen_largo": ("📘 Resumen largo", "Haz un resumen detallado y bien estructurado de este texto:"),
         "puntos_clave": ("⭐ Puntos clave", "Extrae los puntos clave en viñetas:"),
         "explicacion_simple": ("👶 Explicación simple", "Explica este texto como si fuera para un niño de 10 años:"),
-        "traducir": ("🌎 Traducción", "Traduce este texto al español:"),
     }
 
     titulo, prompt = prompts.get(accion, ("📄 Resumen", "Haz un resumen de este texto:"))
@@ -603,12 +582,11 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
             resultado = resultado[:3990] + "\n\n[Texto recortado por longitud]"
 
         await query.edit_message_text(f"{titulo}:\n\n{resultado}")
-
-    except Exception as e:
-        logger.error(f"Error con OpenAI: {e}")
-        await query.edit_message_text(t(lang, "error_ia"))
-
+except Exception as e:
+    logger.error(f"Error con OpenAI: {e}")
+    await query.edit_message_text(t(lang, "error_ia"))
 
 async def texto_no_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    lang = obtener_idioma
-
+    lang = obtener_idioma_usuario(update, context)
+    await update.message.reply_text(t(lang, "solo_pdf_doc"))
+  
