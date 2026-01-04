@@ -469,10 +469,9 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton(t(lang, "trad_pdf_completo"), callback_data="trad_pdf_menu")],
             [InlineKeyboardButton(t(lang, "trad_resumen"), callback_data="trad_resumen_menu")],
         ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(
             t(lang, "trad_que"),
-            reply_markup=reply_markup,
+            reply_markup=InlineKeyboardMarkup(keyboard),
         )
         return
 
@@ -492,10 +491,9 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton("🇩🇪 Deutsch", callback_data="trad_pdf_de"),
             ],
         ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(
             t(lang, "elige_idioma_trad"),
-            reply_markup=reply_markup,
+            reply_markup=InlineKeyboardMarkup(keyboard),
         )
         return
 
@@ -515,10 +513,9 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton("🇩🇪 Deutsch", callback_data="trad_resumen_de"),
             ],
         ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(
             t(lang, "elige_idioma_trad"),
-            reply_markup=reply_markup,
+            reply_markup=InlineKeyboardMarkup(keyboard),
         )
         return
 
@@ -526,6 +523,7 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if accion.startswith("trad_pdf_"):
         idioma_destino = accion.replace("trad_pdf_", "")
         texto = context.user_data.get("pdf_text", "")
+
         if not texto:
             await query.edit_message_text(t(lang, "reenviar_pdf"))
             return
@@ -537,6 +535,7 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if len(resultado) > 4000:
                 resultado = resultado[:3990] + "\n\n[Texto recortado por longitud]"
             await query.edit_message_text(resultado)
+
         except Exception as e:
             logger.error(f"Error al traducir PDF: {e}")
             await query.edit_message_text(t(lang, "error_ia"))
@@ -546,6 +545,7 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if accion.startswith("trad_resumen_"):
         idioma_destino = accion.replace("trad_resumen_", "")
         resumen = context.user_data.get("last_summary", "")
+
         if not resumen:
             await query.edit_message_text(t(lang, "reenviar_pdf"))
             return
@@ -557,6 +557,7 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if len(resultado) > 4000:
                 resultado = resultado[:3990] + "\n\n[Texto recortado por longitud]"
             await query.edit_message_text(resultado)
+
         except Exception as e:
             logger.error(f"Error al traducir resumen: {e}")
             await query.edit_message_text(t(lang, "error_ia"))
@@ -582,11 +583,13 @@ async def botones_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
             resultado = resultado[:3990] + "\n\n[Texto recortado por longitud]"
 
         await query.edit_message_text(f"{titulo}:\n\n{resultado}")
-except Exception as e:
-    logger.error(f"Error con OpenAI: {e}")
-    await query.edit_message_text(t(lang, "error_ia"))
+
+    except Exception as e:
+        logger.error(f"Error con OpenAI: {e}")
+        await query.edit_message_text(t(lang, "error_ia"))
+
 
 async def texto_no_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = obtener_idioma_usuario(update, context)
     await update.message.reply_text(t(lang, "solo_pdf_doc"))
-  
+
